@@ -1,0 +1,43 @@
+name: "[REUSABLE WORKFLOW] - Module Pull Request"
+
+on:
+  workflow_call:
+    inputs:
+      tflint_version:
+        required: false
+        type: string
+        default: latest
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Detect Terraform version
+      uses: dflook/terraform-version@v1
+
+    - uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: ${{ steps.terraform-version.outputs.terraform }}
+
+    - uses: actions/cache@v2
+      name: Cache plugin dir
+      with:
+        path: ~/.tflint.d/plugins
+        key: ${{ matrix.os }}-tflint-${{ hashFiles('.tflint.hcl') }}
+
+    - uses: terraform-linters/setup-tflint@v1
+      name: Setup TFLint
+      with:
+        tflint_version: ${{ inputs.tflint_version }}
+    
+    - name: Init TFLint
+      run: tflint --init
+
+    - name: Run TFLint
+      run: tflint -f compact
